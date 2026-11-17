@@ -13,6 +13,12 @@ button, input { font: inherit; }
 /* 老人模式全局基础：放大字号约 1.25 倍 */
 .elderly { font-size: 125%; }
 
+/* 儿童模式全局基础：适度放大字号与触控区域；与老人模式叠加时以老人字号为主 */
+.kids:not(.elderly) { font-size: 112%; }
+.elderly.kids { font-size: 137.5%; }
+.kids button { min-height: 2.5rem; }
+.kids .kids-cta { min-height: 3.25rem; }
+
 /* 老人模式：增强对比度，提升半透明文字不透明度至 WCAG AA（≥ 4.5:1） */
 .elderly .text-rice-200\/40 { color: rgb(243 230 208 / 0.8); }
 .elderly .text-rice-200\/60 { color: rgb(243 230 208 / 0.9); }

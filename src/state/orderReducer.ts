@@ -43,6 +43,10 @@ export function orderReducer(state: AppState, action: AppAction): AppState {
         .filter((item) => item.quantity > 0)
       return { ...state, cart }
     }
+    case 'REMOVE_CART': {
+      const cart = state.cart.filter((item) => item.uid !== action.uid)
+      return { ...state, cart }
+    }
     case 'SUBMIT_ORDER': {
       if (!state.cart.length) return state
       const additions = state.cart.map((item) => ({ ...item, stage: 'submitted' as const }))

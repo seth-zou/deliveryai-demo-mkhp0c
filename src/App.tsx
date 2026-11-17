@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShoppingBasket } from 'lucide-react'
+import { Baby, ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShieldCheck, ShoppingBasket } from 'lucide-react'
 import { HomeView } from '@/components/HomeView'
 import { WelcomeView } from '@/components/WelcomeView'
 import { CartPanel } from '@/components/CartPanel'
@@ -14,6 +14,7 @@ import { TopBar } from '@/components/TopBar'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useElderlyMode } from '@/hooks/useElderlyMode'
+import { useKidsMode } from '@/hooks/useKidsMode'
 import { initialViewFromHash, useViewRoute } from '@/hooks/useViewRoute'
 import { orderReducer, initialState } from '@/state/orderReducer'
 import { products } from '@/data/menu'
@@ -25,15 +26,17 @@ function createInitialState(): AppState {
   const requestedView = initialViewFromHash()
 
   // preview=menu：预置一桌带购物车的点餐态，供设计/截图预览
-  if (search.get('preview') === 'menu') {
-    const product = products[2]
+  // preview=kids：直接进入儿童模式菜单预览（useKidsMode 同步识别该参数）
+  const preview = search.get('preview')
+  if (preview === 'menu' || preview === 'kids') {
+    const product = preview === 'kids' ? products.find((item) => item.id === 'p3')! : products[2]
     const spec = [i18next.t('menu.option.full'), i18next.t('menu.option.original')].join(' · ')
     return {
       ...initialState,
       table: 'A08',
       view: 'menu',
       cart: [{ uid: 'preview-item', productId: product.id, name: i18next.t(product.name), price: product.price, quantity: 1, image: product.image, spec, orderedBy: '姚乾' }],
-      lastMessage: initialState.lastMessage,
+      lastMessage: preview === 'kids' ? i18next.t('message.kids_on') : initialState.lastMessage,
     }
   }
 
@@ -50,11 +53,14 @@ export default function App() {
   const { t, i18n } = useTranslation()
   const [state, dispatch] = useReducer(orderReducer, undefined, createInitialState)
   const { enabled: elderly, toggle: toggleElderly } = useElderlyMode()
+  const { enabled: kids, setEnabled: setKids } = useKidsMode()
   const [serviceOpen, setServiceOpen] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [kidsGuardOpen, setKidsGuardOpen] = useState(false)
   const cartTotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const waitingServices = state.services.filter((service) => service.status === 'waiting').length
+  const kidsUnsafeCartItems = state.cart.filter((item) => item.kidsUnsafe)
 
   // 视图 ↔ URL hash 双向同步；未绑定桌台时只有 home 可达，其余地址回落到 home
   const canView = useCallback((view: ViewName) => view === 'home' || !!state.table, [state.table])
@@ -83,7 +89,27 @@ export default function App() {
   }
   const handleToggleElderly = () => {
     toggleElderly()
-    dispatch({ type: 'SET_MESSAGE', message: elderly ? '已切换为常规模式' : '已切换为老人模式' })
+    dispatch({ type: 'SET_MESSAGE', message: elderly ? t('message.elderly_off') : t('message.elderly_on') })
+  }
+  const handleToggleKids = () => {
+    if (kids) {
+      setKids(false)
+      dispatch({ type: 'SET_MESSAGE', message: t('message.kids_off') })
+      return
+    }
+    // 购物车已有超级辣时，先让家长确认移除，再开启儿童模式
+    if (kidsUnsafeCartItems.length > 0) {
+      setKidsGuardOpen(true)
+      return
+    }
+    setKids(true)
+    dispatch({ type: 'SET_MESSAGE', message: t('message.kids_on') })
+  }
+  const confirmEnableKids = () => {
+    kidsUnsafeCartItems.forEach((item) => dispatch({ type: 'REMOVE_CART', uid: item.uid }))
+    setKids(true)
+    setKidsGuardOpen(false)
+    dispatch({ type: 'SET_MESSAGE', message: t('message.kids_unsafe_removed') })
   }
 
   if (state.view === 'home' || !state.table) {
@@ -102,25 +128,38 @@ export default function App() {
         serviceCount={waitingServices}
         language={i18n.language}
         elderly={elderly}
+        kids={kids}
         onToggleLanguage={toggleLanguage}
         onToggleElderly={handleToggleElderly}
+        onToggleKids={handleToggleKids}
         onView={changeView}
         onService={() => setServiceOpen(true)}
         onConsole={() => setConsoleOpen(true)}
       />
 
+      {kids && (
+        <div className="mx-auto max-w-7xl px-4 pt-3 lg:px-6">
+          <div className="flex items-center gap-2 rounded-2xl border border-amber-400/40 bg-amber-100/90 px-4 py-3 text-sm font-bold text-charcoal-700" role="status">
+            {elderly ? <ShieldCheck size={18} className="shrink-0 text-amber-500" /> : <Baby size={18} className="shrink-0 text-amber-500" />}
+            <span>{elderly ? t('common.kids_elderly_active') : t('common.kids_active')}</span>
+          </div>
+        </div>
+      )}
+
       {state.view === 'menu' && (
         <main className="mx-auto grid max-w-7xl gap-6 px-4 py-5 pb-28 lg:grid-cols-3 lg:px-6 lg:py-7 lg:pb-8">
           <div className="lg:col-span-2">
-            <MenuView diners={state.diners} soldOut={state.soldOut} onAdd={(item) => dispatch({ type: 'ADD_CART', item })} />
+            <MenuView diners={state.diners} soldOut={state.soldOut} kids={kids} onAdd={(item) => dispatch({ type: 'ADD_CART', item })} />
           </div>
           <aside className="hidden lg:block">
             <div className="sticky top-28">
-              <CartPanel items={state.cart} onQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })} onSubmit={submitOrder} />
-              <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-100/70 p-4 text-sm text-charcoal-700">
-                <p className="font-bold">{t('common.collab_title')}</p>
-                <p className="mt-1 leading-6 text-charcoal-500">{t('common.collab_desc')}</p>
-              </div>
+              <CartPanel items={state.cart} kids={kids} onQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })} onSubmit={submitOrder} />
+              {!kids && (
+                <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-100/70 p-4 text-sm text-charcoal-700">
+                  <p className="font-bold">{t('common.collab_title')}</p>
+                  <p className="mt-1 leading-6 text-charcoal-500">{t('common.collab_desc')}</p>
+                </div>
+              )}
             </div>
           </aside>
         </main>
@@ -156,7 +195,7 @@ export default function App() {
 
       <Dialog open={cartOpen} onOpenChange={setCartOpen}>
         <DialogContent title={t('cart.dialog_title')}>
-          <div className="mt-5"><CartPanel compact items={state.cart} onQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })} onSubmit={submitOrder} /></div>
+          <div className="mt-5"><CartPanel compact kids={kids} items={state.cart} onQuantity={(uid, delta) => dispatch({ type: 'CHANGE_QTY', uid, delta })} onSubmit={submitOrder} /></div>
         </DialogContent>
       </Dialog>
 
@@ -175,6 +214,26 @@ export default function App() {
         <MobileNav active={serviceOpen} icon={ConciergeBell} label={t('common.nav_service')} badge={waitingServices} onClick={() => setServiceOpen(true)} />
         <MobileNav active={consoleOpen} icon={LayoutDashboard} label={t('common.nav_demo')} onClick={() => setConsoleOpen(true)} />
       </nav>
+
+      <Dialog open={kidsGuardOpen} onOpenChange={setKidsGuardOpen}>
+        <DialogContent title={t('cart.kids_guard_title')}>
+          <div className="mt-4 flex flex-col gap-4">
+            <p className="text-sm leading-6 text-charcoal-700">{t('cart.kids_guard_desc')}</p>
+            <ul className="space-y-2 rounded-2xl bg-rice-100 p-3 text-sm">
+              {kidsUnsafeCartItems.map((item) => (
+                <li key={item.uid} className="flex items-center justify-between gap-3 font-bold text-charcoal-900">
+                  <span className="truncate">{item.name}</span>
+                  <span className="shrink-0 text-xs text-chili-600">{item.spec}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setKidsGuardOpen(false)}>{t('cart.kids_guard_cancel')}</Button>
+              <Button className="flex-1" onClick={confirmEnableKids}>{t('cart.kids_guard_remove')}</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="pointer-events-none fixed left-1/2 top-24 z-40 -translate-x-1/2 rounded-full bg-charcoal-900/90 px-4 py-2 text-xs font-semibold text-white shadow-float">
         {state.lastMessage}

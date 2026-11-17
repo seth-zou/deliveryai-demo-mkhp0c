@@ -10,6 +10,8 @@ export interface Product {
   image: string
   badge?: string
   orderedCount?: number
+  /** 是否适合儿童模式优先推荐（演示数据标记，不新增真实菜品） */
+  kidFriendly?: boolean
   options?: {
     portion?: string[]
     flavor?: string[]
@@ -26,6 +28,8 @@ export interface CartItem {
   image: string
   spec: string
   orderedBy: string
+  /** 该菜品选择了儿童模式限制的高风险选项（当前为超级辣） */
+  kidsUnsafe?: boolean
 }
 
 export interface OrderItem extends CartItem {
@@ -58,6 +62,7 @@ export type AppAction =
   | { type: 'SET_VIEW'; view: ViewName }
   | { type: 'ADD_CART'; item: CartItem }
   | { type: 'CHANGE_QTY'; uid: string; delta: number }
+  | { type: 'REMOVE_CART'; uid: string }
   | { type: 'SUBMIT_ORDER' }
   | { type: 'SET_STAGE'; stage: OrderStage }
   | { type: 'TOGGLE_SOLD_OUT'; productId: string }
