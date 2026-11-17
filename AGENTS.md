@@ -59,6 +59,8 @@ playwright.config.ts       # E2E 配置
 
 模式样式统一由 `html` class 驱动：`.elderly` 放大字号至 125%，`.kids` 放大字号至 112% 并提升按钮最小高度；两者同时开启时字号取 137.5%，儿童内容过滤始终生效。
 
+窄屏（`<sm`）顶部栏只保留品牌、桌台与儿童/老人/语言入口；服务、会员与演示控制台收敛到移动端底部导航（点餐/订单/服务/会员/演示五项）。新增顶部栏入口时必须复核 390px 宽度下无横向溢出。
+
 ## 编码约定
 
 - 页面组件放 `src/components/`，通用件放 `src/components/ui/`；弹窗用封装的 `Dialog`，按钮用 CVA `Button`（default/secondary/outline/ghost），图标用 lucide-react 并靠 `currentColor` 继承。

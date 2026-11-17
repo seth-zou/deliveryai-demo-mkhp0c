@@ -143,7 +143,41 @@ test.describe('儿童模式 - E2E 验收测试', () => {
     await page.getByRole('button', { name: '超级辣' }).click()
     await expect(page.getByText('风险提示')).toBeVisible()
   })
-})
+
+  test('REQ-003.1: 儿童模式忽略常规模式遗留的搜索词', async ({ page }) => {
+    await enterMenu(page)
+    await page.getByPlaceholder('搜索锅底、菜品或饮品').fill('鎏金')
+    await expect(page.locator('article')).toHaveCount(1)
+
+    await enableKids(page)
+    await expect(page.getByPlaceholder('搜索锅底、菜品或饮品')).not.toBeVisible()
+    // 搜索框已隐藏，菜单不应继续被不可见的搜索条件过滤
+    expect(await page.locator('article').count()).toBeGreaterThan(1)
+    await expect(page.getByText('儿童友好').first()).toBeVisible()
+  })
+
+  test('REQ-010.1: ?preview=kids 直达儿童模式且不写入持久化状态', async ({ page }) => {
+    await page.goto('/?preview=kids')
+
+    await expect(page.locator('html')).toHaveClass(/kids/)
+    await expect(page.getByText('小朋友专属点餐')).toBeVisible()
+    await expect(page.getByText('琥珀嫩牛肉').first()).toBeVisible()
+    expect(await page.evaluate(() => localStorage.getItem('kids-mode'))).toBeNull()
+  })
+
+  test('NFR-001: 移动端顶部栏收敛后会员入口仍可达（R-01）', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterMenu(page)
+
+    await page.getByRole('button', { name: '会员' }).click()
+    await expect(page.getByText('会员与排号')).toBeVisible()
+    await expect(page.getByText('当前排号')).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await enableKids(page)
+    await page.getByRole('button', { name: '会员' }).click()
+    await expect(page.getByText('会员与排号')).toBeVisible()
+  })
 
   test('NFR-002: 移动端儿童模式无横向溢出且入口可见', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
@@ -154,3 +188,16 @@ test.describe('儿童模式 - E2E 验收测试', () => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)
   })
+
+  test('NFR-003: 儿童模式关键触控目标不小于 44px / 52px', async ({ page }) => {
+    await enterMenu(page)
+    await enableKids(page)
+
+    const addButton = page.locator('article').first().locator('button').last()
+    await expect.poll(async () => (await addButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+
+    await addButton.click()
+    const cta = page.getByRole('button', { name: '加入本桌购物车' })
+    await expect.poll(async () => (await cta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(52)
+  })
+})

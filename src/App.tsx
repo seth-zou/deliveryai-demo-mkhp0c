@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Baby, ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShieldCheck, ShoppingBasket } from 'lucide-react'
+import { Baby, ClipboardList, ConciergeBell, LayoutDashboard, Menu as MenuIcon, ShieldCheck, ShoppingBasket, UserRound } from 'lucide-react'
 import { HomeView } from '@/components/HomeView'
 import { WelcomeView } from '@/components/WelcomeView'
 import { CartPanel } from '@/components/CartPanel'
@@ -57,6 +57,7 @@ export default function App() {
   const [serviceOpen, setServiceOpen] = useState(false)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [memberOpen, setMemberOpen] = useState(false)
   const [kidsGuardOpen, setKidsGuardOpen] = useState(false)
   const cartTotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const waitingServices = state.services.filter((service) => service.status === 'waiting').length
@@ -132,6 +133,8 @@ export default function App() {
         onToggleLanguage={toggleLanguage}
         onToggleElderly={handleToggleElderly}
         onToggleKids={handleToggleKids}
+        memberOpen={memberOpen}
+        onMemberOpenChange={setMemberOpen}
         onView={changeView}
         onService={() => setServiceOpen(true)}
         onConsole={() => setConsoleOpen(true)}
@@ -208,10 +211,11 @@ export default function App() {
         )}
       </div>
 
-      <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-charcoal-900/5 bg-white/95 px-2 pt-2 backdrop-blur lg:hidden">
+      <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-charcoal-900/5 bg-white/95 px-2 pt-2 backdrop-blur lg:hidden">
         <MobileNav active={state.view === 'menu'} icon={MenuIcon} label={t('common.nav_menu')} onClick={() => changeView('menu')} />
         <MobileNav active={state.view === 'order'} icon={ClipboardList} label={t('common.nav_order')} onClick={() => changeView('order')} />
         <MobileNav active={serviceOpen} icon={ConciergeBell} label={t('common.nav_service')} badge={waitingServices} onClick={() => setServiceOpen(true)} />
+        <MobileNav active={memberOpen} icon={UserRound} label={t('common.nav_member')} onClick={() => setMemberOpen(true)} />
         <MobileNav active={consoleOpen} icon={LayoutDashboard} label={t('common.nav_demo')} onClick={() => setConsoleOpen(true)} />
       </nav>
 

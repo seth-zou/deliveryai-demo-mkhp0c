@@ -49,7 +49,8 @@ export function MenuView({ diners, soldOut, kids, onAdd }: MenuViewProps) {
       const matchCategory = category === 'menu.cat.recommend' || product.category === category
       const productName = t(product.name)
       const productDesc = t(product.description)
-      const matchSearch = productName.includes(search) || productDesc.includes(search)
+      // 儿童模式隐藏搜索框：忽略常规模式下遗留的搜索词，避免“看不见的过滤条件”
+      const matchSearch = kids || productName.includes(search) || productDesc.includes(search)
       return matchCategory && matchSearch
     })
     // 儿童模式：儿童友好菜品优先展示，不改变原有分类与数据

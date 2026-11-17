@@ -15,12 +15,14 @@ interface TopBarProps {
   onToggleLanguage: () => void
   onToggleElderly: () => void
   onToggleKids: () => void
+  memberOpen: boolean
+  onMemberOpenChange: (open: boolean) => void
   onView: (view: ViewName) => void
   onService: () => void
   onConsole: () => void
 }
 
-export function TopBar({ table, view, serviceCount, language, elderly, kids, onToggleLanguage, onToggleElderly, onToggleKids, onView, onService, onConsole }: TopBarProps) {
+export function TopBar({ table, view, serviceCount, language, elderly, kids, onToggleLanguage, onToggleElderly, onToggleKids, memberOpen, onMemberOpenChange, onView, onService, onConsole }: TopBarProps) {
   const { t } = useTranslation()
   const areaKey = tableAreas[table]
   const tableLabel = areaKey ? `${table} · ${t(areaKey)}` : table
@@ -44,7 +46,7 @@ export function TopBar({ table, view, serviceCount, language, elderly, kids, onT
           <Button variant="outline" size="icon" onClick={onService} className="relative hidden sm:inline-flex" aria-label={t('common.aria_service')}>
             <PhoneCall size={18} />{serviceCount > 0 && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-chili-500" />}
           </Button>
-          <Dialog>
+          <Dialog open={memberOpen} onOpenChange={onMemberOpenChange}>
             <DialogTrigger asChild><Button variant="outline" size="icon" className="hidden sm:inline-flex" aria-label={t('common.aria_member')}><UserRound size={18} /></Button></DialogTrigger>
             <DialogContent title={t('common.member_title')}>
               <div className="mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-charcoal-900 to-charcoal-700 p-5 text-white shadow-card">
