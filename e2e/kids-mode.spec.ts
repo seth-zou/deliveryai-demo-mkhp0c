@@ -144,3 +144,13 @@ test.describe('儿童模式 - E2E 验收测试', () => {
     await expect(page.getByText('风险提示')).toBeVisible()
   })
 })
+
+  test('NFR-002: 移动端儿童模式无横向溢出且入口可见', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await enterMenu(page)
+    await enableKids(page)
+
+    await expect(page.getByRole('button', { name: '关闭儿童模式' })).toBeVisible()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+  })
