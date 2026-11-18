@@ -9,6 +9,8 @@
 
 主流程视图状态机：`home → welcome → menu → order → checkout`。视图经 hash 路由与 URL 一一对应（`#/home`、`#/welcome`、`#/menu`、`#/order`、`#/checkout`），支持深链接与浏览器前进/后退；选用 hash 模式（非 History 模式）以兼容 Vite `base './'` 与 GitHub Pages 子路径部署。
 
+演示能力包含中英文切换、老人模式与儿童模式。儿童模式通过 `html.kids` 简化点餐界面、优先展示儿童友好菜品、隐藏「超级辣」选项；模式状态与老人模式相互独立。
+
 ## 技术栈
 
 React 18 · TypeScript ~5.6 · Vite 6 · Tailwind CSS 3.4 · Radix UI（Dialog）· lucide-react · class-variance-authority · i18next（中/英）· Playwright（E2E）。状态用 `useReducer` 内存态管理；ESM；路径别名 `@` → `src/`。
@@ -25,11 +27,13 @@ src/
 ├── state/orderReducer.ts  # 订单/购物车/服务/售罄/支付 reducer
 ├── data/menu.ts           # 菜品/分类/桌台静态数据
 ├── hooks/useElderlyMode.ts# 老人模式：localStorage + html.elderly
+├── hooks/useKidsMode.ts   # 儿童模式：localStorage + html.kids，支持 ?preview=kids 预览
 ├── hooks/useViewRoute.ts  # 视图 ↔ URL hash 双向同步（含深链接/非法地址纠正）
 ├── lib/utils.ts           # cn（类名合并）、money（¥ 格式化）
 ├── components/            # 页面组件（HomeView/WelcomeView/MenuView/OrderView/CheckoutView 对应各视图）；通用件在 components/ui/（button、dialog）
 └── assets/                # hotpot/broth/beef/vegetables 图片
 e2e/super-spicy.spec.ts    # 超级辣风险提示 E2E 验收
+e2e/kids-mode.spec.ts      # 儿童模式 E2E 验收（开关、持久化、过滤、叠加、主流程）
 e2e/view-routing.spec.ts   # 视图 URL hash 路由 E2E 验收
 index.html                 # 入口，含初始化语言的内联脚本
 tailwind.config.js         # 自定义色板；vite.config.ts 配 base './' 与 @ 别名
@@ -53,12 +57,16 @@ playwright.config.ts       # E2E 配置
 
 当前为单一浅色主题，Tailwind 未配置 `darkMode`，组件中没有 `dark:` 变体。全局颜色/字号变化有 250ms 过渡（`src/index.css`），老人模式切换无需额外动画。
 
+模式样式统一由 `html` class 驱动：`.elderly` 放大字号至 125%，`.kids` 放大字号至 112% 并提升按钮最小高度；两者同时开启时字号取 137.5%，儿童内容过滤始终生效。
+
+窄屏（`<sm`）顶部栏只保留品牌、桌台与儿童/老人/语言入口；服务、会员与演示控制台收敛到移动端底部导航（点餐/订单/服务/会员/演示五项）。新增顶部栏入口时必须复核 390px 宽度下无横向溢出。
+
 ## 编码约定
 
 - 页面组件放 `src/components/`，通用件放 `src/components/ui/`；弹窗用封装的 `Dialog`，按钮用 CVA `Button`（default/secondary/outline/ghost），图标用 lucide-react 并靠 `currentColor` 继承。
 - 样式只用 Tailwind 类名，不用 CSS Modules / styled-components。
 - 新增 i18n 文案在 `src/i18n.ts` 的 zh/en 两处同步添加，按功能分组（`common.`、`menu.`、`cart.`、`order.` 等）。
-- 新增 `localStorage` 持久化一律 `try/catch` 包裹，不可用时降级内存态；现有 key：`i18nextLng`、`elderly-mode`（`true`/`false`）。
+- 新增 `localStorage` 持久化一律 `try/catch` 包裹，不可用时降级内存态；现有 key：`i18nextLng`、`elderly-mode`（`true`/`false`）、`kids-mode`（`true`/`false`）。
 - 需要在 React 挂载前设置 html 属性/class 时，扩展 `index.html` 的内联脚本。
 - npm 源默认走 `https://registry.npmmirror.com`（见根目录与 `server/.npmrc`）。
 

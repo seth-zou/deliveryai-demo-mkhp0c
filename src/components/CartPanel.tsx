@@ -7,14 +7,16 @@ import type { CartItem } from '@/types'
 interface CartPanelProps {
   items: CartItem[]
   compact?: boolean
+  kids?: boolean
   onQuantity: (uid: string, delta: number) => void
   onSubmit: () => void
 }
 
-export function CartPanel({ items, compact, onQuantity, onSubmit }: CartPanelProps) {
+export function CartPanel({ items, compact, kids, onQuantity, onSubmit }: CartPanelProps) {
   const { t } = useTranslation()
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const people = [...new Set(items.map((item) => item.orderedBy))]
+  const hasKidsUnsafe = items.some((item) => item.kidsUnsafe)
 
   if (!items.length) {
     return (
@@ -32,13 +34,14 @@ export function CartPanel({ items, compact, onQuantity, onSubmit }: CartPanelPro
         <div><h3 className="text-lg font-extrabold text-charcoal-900">{t('cart.title')}</h3><p className="mt-1 text-xs text-charcoal-500">{t('cart.item_count', { count: items.reduce((sum, item) => sum + item.quantity, 0) })}</p></div>
         <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-charcoal-700"><Users size={13} />{t('cart.people', { count: people.length })}</span>
       </div>
+      {kids && <p className="mt-3 rounded-xl bg-amber-100/80 px-3 py-2 text-xs font-bold text-charcoal-700">{t('cart.kids_hint')}</p>}
       <div className="mt-5 space-y-4">
         {items.map((item) => (
           <div key={item.uid} className="group flex gap-3 border-b border-charcoal-900/5 pb-4 last:border-0">
             <img src={item.image} alt={item.name} className="h-16 w-16 rounded-xl object-cover" />
             <div className="min-w-0 flex-1">
               <div className="flex justify-between gap-2"><p className="truncate font-bold text-charcoal-900">{item.name}</p><strong className="text-sm text-chili-500">{money(item.price * item.quantity)}</strong></div>
-              <p className="mt-1 truncate text-xs text-charcoal-500">{item.spec}</p>
+              <p className={`mt-1 truncate text-xs ${item.kidsUnsafe ? 'font-bold text-chili-600' : 'text-charcoal-500'}`}>{item.spec}</p>
               <div className="mt-2 flex items-center justify-between">
                 <span className="flex items-center gap-1 text-xs font-semibold text-charcoal-500"><span className="h-5 w-5 rounded-full bg-amber-100 text-center leading-5 text-amber-500">{item.orderedBy.slice(0, 1)}</span>{t('cart.ordered_by', { name: item.orderedBy })}</span>
                 <div className="flex items-center gap-2 rounded-lg bg-rice-100 p-1">
@@ -55,8 +58,8 @@ export function CartPanel({ items, compact, onQuantity, onSubmit }: CartPanelPro
         <div className="flex justify-between text-sm text-charcoal-500"><span>{t('cart.subtotal')}</span><span>{money(subtotal)}</span></div>
         <div className="mt-2 flex justify-between font-extrabold text-charcoal-900"><span>{t('cart.estimated')}</span><span className="text-xl text-chili-500">{money(subtotal)}</span></div>
       </div>
-      <Button onClick={onSubmit} className="mt-4 w-full"><Check size={17} />{compact ? t('cart.submit_new') : t('cart.submit')}</Button>
-      <p className="mt-3 text-center text-xs text-charcoal-500">{t('cart.submit_hint')}</p>
+      <Button onClick={onSubmit} disabled={Boolean(kids && hasKidsUnsafe)} className={`mt-4 w-full ${kids ? 'kids-cta text-base' : ''}`}><Check size={kids ? 20 : 17} />{compact ? t('cart.submit_new') : t('cart.submit')}</Button>
+      <p className={`mt-3 text-center text-xs ${kids && hasKidsUnsafe ? 'font-bold text-chili-600' : 'text-charcoal-500'}`}>{kids && hasKidsUnsafe ? t('cart.kids_submit_blocked') : t('cart.submit_hint')}</p>
     </section>
   )
 }
